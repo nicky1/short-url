@@ -1,0 +1,1 @@
+var mouseflowHtmlDelay = 8000;if(typeof mouseflow=="undefined"){var mouseflow=(function(){function _0(){return null}return{start:_0,stop:_0,newPageView:_0,getSessionId:_0,getPageViewId:_0,tag:_0,star:_0,comment:_0,annotate:_0,debug:_0,baseUrl:null,websiteId:null,recordingRate:null,version:null,isRecording:false}})(window)}

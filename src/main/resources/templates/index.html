@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html xmlns="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+
+    <title>titizz.com 短网址服务</title>
+
+    <script src="http://cdn.bootcss.com/jquery/3.2.1/jquery.min.js"></script>
+
+    <!-- 最新版本的 Bootstrap 核心 CSS 文件 -->
+    <link rel="stylesheet" href="https://cdn.bootcss.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+
+    <!-- 最新的 Bootstrap 核心 JavaScript 文件 -->
+    <script src="https://cdn.bootcss.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+
+    <script src="/js/rem.js"></script>
+
+    <style type="text/css">
+        body{
+            margin: 0px;
+            padding: 0px;
+
+            background: url("/image/bg.png") no-repeat fixed center;
+            background-size: 100% 100%;
+            -moz-background-size: 100% 100%;
+        }
+
+        #origin {
+            width: 50%;
+            float: left;
+        }
+
+        .form {
+            margin-left: 25%;
+            margin-top: 5rem;
+        }
+
+        .title {
+            color: white;
+        }
+
+        #compress {
+            margin-left: 0.1rem;
+        }
+
+        .result {
+            width: 25%;
+            display: none;
+            margin-left: 25%;
+            margin-top: 0.5rem;
+        }
+
+        .container {
+            width: 24.25rem;
+            padding: 0px;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="form">
+        <h3 class="title">titizz.com 短地址服务</h3>
+        <input id="origin" type="text" class="form-control" style="" placeholder="请在这里输入网址 ......">
+        <button id="compress" type="submit" class="btn btn-primary">缩短网址</button>
+    </div>
+    <div class="result">
+        <label style="color: white">短地址：</label>
+        <div class="input-group short_url_div">
+            <input id="short_url" type="text" class="form-control">
+            <span class="input-group-btn">
+                   <button class="btn btn-default" type="button" onclick="copy()">复制</button>
+               </span>
+        </div>
+    </div>
+</div>
+
+<script type="text/javascript">
+$(document).ready(function() {
+    $("#compress").click(function() {
+        var origin = $("#origin").val();
+        var ajax = $.post({
+            url: "compress",
+            data: {url: origin},
+            success: function(result) {
+                console.log(result);
+                if (!result.success) {
+                    alert(result.message);
+                    return;
+                }
+
+                $(".result").css("display", "block");
+                $("#short_url").val(result.shortUrl);
+            }
+        });
+
+        ajax.fail(function (xhr, status) {
+            alert(xhr.responseText);
+        });
+    });
+});
+
+function copy() {
+    $("#short_url").select();
+    document.execCommand("Copy");
+}
+</script>
+</body>
+</html>
