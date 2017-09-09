@@ -86,10 +86,11 @@ nginx 配置简单的反向代理并不复杂，这里不展开讨论。在这�
 </table>
 
 当 service 层向 url_mapping_2 表中插入 https://segmentfault.com/a/1190000010660103 数据时，返回给 service 层的号码不应该是3，而应该是1002。此时需要做一个简单的转换，转换公式如下：
-```
-real_code = (code - initial_code) * 1000 + initial_code
-```
+
+`real_code = (code - initial_code) * 1000 + initial_code`
+
 号码3和初始号码2带入其中计算就能得到 1002。这里说的是 dao 层返回给 service 层时做的转换，service 层向 dao 层查询数据时，也需将 real_code 转换为数据表中的 code。以 real_code = 1002 为例：
+
 ```
 initial_code = real_code % 1000;
 code = initial_code + real_code / 1000
@@ -139,13 +140,46 @@ code = initial_code + real_code / 1000
 先说说 in-use-initial-codes 缓存，in-use-initial-codes 缓存了所有的短链接服务正在使用的初始号码。在上一节说到过初始号码分配的策略，当 initial_code 表无法分配有效的初始号码时，就需要通过比较**没有被使用的**初始号码对应的 url_mapping 表中 code 字段最大值与整个号码空间的最大值的大小，来确定初始号码是否可用。注意加粗字体“没有被使用的”，怎样去确定哪些初始号码没有被使用？答案就是通过 in-use-initial-codes 缓存，除 in-use-initial-codes 缓存的初始号码，其他的初始号码都是未被使用的。in-use-initial-codes 缓存不仅仅只是缓存了当前正在使用的初始号码，同时还要引入过期机制，防止某个服务挂了后，相应的初始号码仍然还存储在缓存中，没有被释放。但由于 zset 不支持其内的数据过期的机制，所以需要我们自己实现一个过期机制。本项目使用 zset score 实现了一个过期机制，服务启动时会将初始号码写入 in-use-initial-codes 中，并将该初始号码的 score 设为当前时间。服务启动后，会定时更新其使用的初始号码的 score 为当前时间，这样就不会被清理程序清理掉。
 
 说完 in-use-initial-codes 缓存，再来说说server-uuid 缓存。正如键名所示，该缓存存储了某个短链接服务的 UUID。不同的服务会定时去抢占这个缓存，并将缓存值设置为自己的 UUID。该缓存的用途只有一个，即表明哪个服务有权限清除 in-use-initial-codes 缓存中过期的初始号码。那么怎样清除过期号码？答案如下：
+
 ```
 min = 0;
 max = current_time - expired_time;
 ZREMRANGEBYSCORE in-use-initial-codes min max 
 ```
 
-### 0x04 总结
+
+### 0x04 环境搭建
+这里简单说一下多台服务器环境的搭建，步骤如下：
+
+1. 在同一台服务器上安装好 Nginx，MySQL，Redis
+2. 配置好 MySQL，并执行 init.sql 文件中所写的存储过程
+3. 如果多机部署的情况下，MySQL 要向其他服务器 IP 授权，不然无法远程访问数据库
+4. 在内网环境下部署 Redis，多机环境下需要并关闭保护模式。
+5. 修改 Spring Boot 配置文件 application.properties 的相关属性
+
+```
+# config datasource
+spring.datasource.url=jdbc:mysql://your mysql ip:3306/short_url?useUnicode=true&characterEncoding=UTF-8&useSSL=false
+spring.datasource.username=name
+spring.datasource.password=password
+
+# config redis
+spring.redis.host=your redis ip
+spring.redis.port=6379
+
+
+redis.address=redis://${spring.redis.host}:${spring.redis.port}
+
+# custom config
+# 如果你有自己的域名，可以将这里配置成你的域名
+site=localhost:8080/
+```
+
+6. 启动短链接程序，并在 Nginx 中配置反向代理
+
+最后需要注意的是，尽量不要把 Redis 暴露在公网上，可能会被植入挖矿程序。
+
+### 0x05 总结
 分布式短链接服务是我写的第一个分布式项目，尽管最终只是一个简单的实现，但是在这个过程中还是学到了一些经验。比如使用 Nginx 配置反向代理、多客户端使用 Redis 要关闭保护模式、多客户端连接 MySQL 时，MySQL 要先对客户端 ip 进行授权才可以，最后还有分布式锁的使用。尽管这些都是很普通的经验，但是我相信在后续不断的学习中，会积累更多的经验。这个项目是一个很好的开端，在接下来的时间里，还要不断的练习，所以 keep going！
 
   [1]: /img/bVSVEr
